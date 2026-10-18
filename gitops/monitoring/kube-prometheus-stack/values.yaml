@@ -1,0 +1,79 @@
+# kube-prometheus-stack — valores para o cluster ToggleMaster
+# Inclui: Prometheus, Alertmanager, Grafana, kube-state-metrics, node-exporter
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    # Scrape todos os ServiceMonitors do cluster, não só do namespace monitoring
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+grafana:
+  enabled: true
+  adminPassword: ""  # gerenciado via secret externo (grafana-admin-secret)
+  existingSecret: grafana-admin-secret
+  adminUser: admin
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: monitoring
+      label: grafana_dashboard
+      labelValue: "1"
+    datasources:
+      enabled: true
+      searchNamespace: monitoring
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      url: http://loki.monitoring.svc.cluster.local:3100
+      access: proxy
+      isDefault: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# kube-state-metrics — expõe métricas dos objetos K8s
+kube-state-metrics:
+  enabled: true
+
+# node-exporter — métricas dos nós
+prometheus-node-exporter:
+  enabled: true
+
+# Desabilitar componentes que já gerenciamos
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
