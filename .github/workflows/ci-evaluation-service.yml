@@ -1,0 +1,151 @@
+name: CI — evaluation-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/evaluation-service/**'
+      - '.github/workflows/ci-evaluation-service.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/evaluation-service/**'
+      - '.github/workflows/ci-evaluation-service.yml'
+
+env:
+  SERVICE: evaluation-service
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: togglemaster/evaluation-service
+
+jobs:
+  # ── 1. Build & Unit Test ──────────────────────────────────────────────────
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Tidy modules
+        working-directory: services/evaluation-service
+        run: go mod tidy
+
+      - name: Build
+        working-directory: services/evaluation-service
+        run: go build ./...
+
+      - name: Test
+        working-directory: services/evaluation-service
+        run: go test ./... -v -count=1
+
+  # ── 2. Lint ───────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Tidy modules
+        working-directory: services/evaluation-service
+        run: go mod tidy
+
+      - name: go vet
+        working-directory: services/evaluation-service
+        run: go vet ./...
+
+  # ── 3. Security Scan (SAST + SCA) ────────────────────────────────────────
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Tidy modules
+        working-directory: services/evaluation-service
+        run: go mod tidy
+
+      - name: Trivy SCA (filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'services/evaluation-service'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          format: 'table'
+
+      - name: gosec SAST
+        uses: securego/gosec@master
+        with:
+          args: '-severity high -confidence high ./services/evaluation-service/...'
+
+  # ── 4. Docker Build, Scan & Push ─────────────────────────────────────────
+  docker-push:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: [lint, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::603727984890:role/CICD-terraform-infra
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        run: echo "IMAGE_TAG=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:sha-$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+
+      - name: Build Docker image
+        working-directory: services/evaluation-service
+        run: docker build -t $IMAGE_TAG .
+
+      - name: Trivy Container Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE_TAG }}'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          format: 'table'
+
+      - name: Push to ECR
+        run: docker push $IMAGE_TAG
+
+      - name: Update GitOps manifest
+        run: |
+          git config user.email "ci-bot@github.com"
+          git config user.name "CI Bot"
+          for attempt in 1 2 3 4 5; do
+            git pull origin main
+            sed -i "s|image: .*/togglemaster/evaluation-service:.*|image: $IMAGE_TAG|" gitops/evaluation-service/deployment.yaml
+            git add gitops/evaluation-service/deployment.yaml
+            git diff --cached --quiet && { echo "Already up to date"; exit 0; }
+            git commit -m "ci: update evaluation-service to sha-$(echo ${{ github.sha }} | cut -c1-7) [skip ci]"
+            git push && exit 0
+            echo "Push rejected, resetting and retrying (attempt $attempt)..."
+            git reset --hard HEAD~1
+          done
+          exit 1

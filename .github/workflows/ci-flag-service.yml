@@ -1,0 +1,141 @@
+name: CI — flag-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/flag-service/**'
+      - '.github/workflows/ci-flag-service.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/flag-service/**'
+      - '.github/workflows/ci-flag-service.yml'
+
+env:
+  SERVICE: flag-service
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: togglemaster/flag-service
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: services/flag-service/requirements.txt
+
+      - name: Install dependencies
+        working-directory: services/flag-service
+        run: pip install -r requirements.txt
+
+      - name: Test
+        working-directory: services/flag-service
+        run: |
+          pip install pytest pytest-cov
+          python -m pytest tests/ -v
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: flake8
+        run: |
+          pip install flake8
+          flake8 services/flag-service \
+            --max-line-length=120 \
+            --extend-ignore=E302,E303,E305,E701,W291,W293,W292,E261,E262,F401 \
+            --exclude=services/flag-service/tests/
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+
+      # SCA — Trivy escaneia requirements.txt em busca de CVEs críticos
+      - name: Trivy SCA (filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'services/flag-service'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          format: 'table'
+
+      # SAST — bandit analisa o código Python
+      - name: bandit SAST
+        run: |
+          pip install bandit
+          bandit -r services/flag-service -lll -iii --exclude services/flag-service/tests/
+
+  docker-push:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: [lint, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::603727984890:role/CICD-terraform-infra
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        run: echo "IMAGE_TAG=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:sha-$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+
+      - name: Build Docker image
+        working-directory: services/flag-service
+        run: docker build -t $IMAGE_TAG .
+
+      - name: Trivy Container Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE_TAG }}'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          format: 'table'
+
+      - name: Push to ECR
+        run: docker push $IMAGE_TAG
+
+      - name: Update GitOps manifest
+        run: |
+          git config user.email "ci-bot@github.com"
+          git config user.name "CI Bot"
+          for attempt in 1 2 3 4 5; do
+            git pull origin main
+            sed -i "s|image: .*/togglemaster/flag-service:.*|image: $IMAGE_TAG|" gitops/flag-service/deployment.yaml
+            git add gitops/flag-service/deployment.yaml
+            git diff --cached --quiet && { echo "Already up to date"; exit 0; }
+            git commit -m "ci: update flag-service to sha-$(echo ${{ github.sha }} | cut -c1-7) [skip ci]"
+            git push && exit 0
+            echo "Push rejected, resetting and retrying (attempt $attempt)..."
+            git reset --hard HEAD~1
+          done
+          exit 1
