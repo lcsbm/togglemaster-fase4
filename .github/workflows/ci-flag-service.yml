@@ -1,4 +1,4 @@
-name: CI — flag-service
+﻿name: CI - flag-service
 
 on:
   push:
@@ -66,7 +66,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # SCA — Trivy escaneia requirements.txt em busca de CVEs crÃ­ticos
+      # SCA — Trivy escaneia requirements.txt em busca de CVEs criticos
       - name: Trivy SCA (filesystem)
         uses: aquasecurity/trivy-action@master
         with:

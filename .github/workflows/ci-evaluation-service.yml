@@ -1,4 +1,4 @@
-name: CI — evaluation-service
+﻿name: CI â€” evaluation-service
 
 on:
   push:
