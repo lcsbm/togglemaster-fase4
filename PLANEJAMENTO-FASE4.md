@@ -17,7 +17,7 @@
 | 3 | Instrumentação dos microsserviços | ✅ Concluído |
 | 4 | APM — New Relic | ✅ Concluído |
 | 5 | Alertas + PagerDuty + Discord | ✅ Concluído |
-| 6 | Self-Healing (GitHub Action) | ⬜ Pendente |
+| 6 | Self-Healing (GitHub Action) | ✅ Concluído |
 | 7 | Terraform apply + validação E2E | ⬜ Pendente |
 
 ---
