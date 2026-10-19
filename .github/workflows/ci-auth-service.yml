@@ -1,4 +1,4 @@
-﻿name: CI â€” auth-service
+name: CI — auth-service
 
 on:
   push:
@@ -77,7 +77,7 @@ jobs:
         working-directory: services/auth-service
         run: go mod tidy
 
-      # SCA â€” Trivy escaneia dependÃªncias (go.sum) em busca de CVEs
+      # SCA — Trivy escaneia dependÃªncias (go.sum) em busca de CVEs
       - name: Trivy SCA (filesystem)
         uses: aquasecurity/trivy-action@master
         with:
@@ -87,7 +87,7 @@ jobs:
           exit-code: '1'
           format: 'table'
 
-      # SAST â€” gosec analisa o cÃ³digo-fonte Go
+      # SAST — gosec analisa o cÃ³digo-fonte Go
       - name: gosec SAST
         uses: securego/gosec@master
         with:
