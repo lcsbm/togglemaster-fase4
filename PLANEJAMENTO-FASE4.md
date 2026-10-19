@@ -12,8 +12,8 @@
 | Etapa | Descrição | Status |
 |---|---|---|
 | 0 | Migração da base da Fase 3 | ✅ Concluído |
-| 1 | Stack de monitoramento no GitOps | ⬜ Pendente |
-| 2 | OTel Collector | ⬜ Pendente |
+| 1 | Stack de monitoramento no GitOps | ✅ Concluído |
+| 2 | OTel Collector | 🔄 Em andamento |
 | 3 | Instrumentação dos microsserviços | ⬜ Pendente |
 | 4 | APM — New Relic | ⬜ Pendente |
 | 5 | Alertas + PagerDuty + Discord | ⬜ Pendente |
@@ -34,22 +34,21 @@
 
 ---
 
-## Etapa 1 — Stack de monitoramento no GitOps
+## Etapa 1 — Stack de monitoramento no GitOps ✅
 
 > Objetivo: Prometheus, Loki e Grafana rodando no cluster via ArgoCD.
 > Localização: `gitops/monitoring/`
 
-- [ ] `gitops/monitoring/namespace.yaml` — namespace `monitoring`
-- [ ] `gitops/monitoring/prometheus/` — HelmRelease do kube-prometheus-stack
-- [ ] `gitops/monitoring/loki/` — HelmRelease do Loki Stack (Loki + Promtail)
-- [ ] `gitops/monitoring/grafana/` — HelmRelease do Grafana (ou embutido no kube-prometheus-stack)
-- [ ] `gitops/monitoring/grafana/configmap-dashboard.yaml` — Dashboard customizado (JSON via ConfigMap)
-- [ ] Validar: todos os pods em `monitoring` Running
-- [ ] Validar: Grafana acessível via port-forward
-- [ ] Validar: métricas dos pods visíveis no Grafana
-- [ ] Validar: logs dos pods visíveis no Loki/Grafana
+- [x] `gitops/monitoring/namespace.yaml` — namespace `monitoring`
+- [x] `gitops/monitoring/kube-prometheus-stack/` — ArgoCD Application + values.yaml (v61.7.2)
+- [x] `gitops/monitoring/loki/` — ArgoCD Application + values.yaml (loki-stack v2.10.2)
+- [x] Grafana embutido no kube-prometheus-stack com sidecar de dashboards
+- [x] Grafana pré-configurado com datasource Loki
+- [x] Validação local (kind): 8/8 pods Running
+- [x] Validação local: Grafana 200, Prometheus 200, Loki 200
+- [x] PR mergeado: `feat/monitoring-stack`
 
-**Dashboard customizado deve exibir:**
+**Dashboard customizado deve exibir (Etapa 5):**
 - [ ] Uso de CPU e memória dos nós do cluster
 - [ ] Taxa de requisições HTTP por microsserviço
 - [ ] Taxa de erros HTTP 5xx por microsserviço
@@ -57,17 +56,22 @@
 
 ---
 
-## Etapa 2 — OTel Collector
+## Etapa 2 — OTel Collector 🔄
 
 > Objetivo: hub central de telemetria — recebe dados dos microsserviços e roteia para Prometheus, Loki e New Relic.
 > Localização: `gitops/monitoring/otel-collector/`
 
-- [ ] `configmap.yaml` — pipeline OTLP receiver → batch processor → exporters
-- [ ] `deployment.yaml` — Deployment do OTel Collector
-- [ ] `service.yaml` — Service expondo porta 4317 (gRPC) e 4318 (HTTP) internamente
-- [ ] Configurar exporter para Prometheus (remote_write ou prometheus exporter)
-- [ ] Configurar exporter para Loki (via loki exporter ou logs pipeline)
-- [ ] Configurar exporter OTLP/HTTP para New Relic (`otlp.nr-data.net:443`)
+- [x] `configmap.yaml` — pipeline OTLP receiver → batch processor → exporters (traces + metrics + logs)
+- [x] `deployment.yaml` — Deployment otel/opentelemetry-collector-contrib:0.104.0
+- [x] `service.yaml` — Service ClusterIP expondo 4317 (gRPC), 4318 (HTTP), 8889 (metrics)
+- [x] `serviceaccount.yaml` — ServiceAccount dedicado
+- [x] `servicemonitor.yaml` — ServiceMonitor para Prometheus scrape
+- [x] `externalsecret.yaml` — ExternalSecret para New Relic License Key
+- [x] `application.yaml` — ArgoCD Application
+- [x] Exporter Prometheus configurado (porta 8889)
+- [x] Exporter Loki configurado
+- [x] Exporter OTLP/gRPC para New Relic (`otlp.nr-data.net:4317`)
+- [ ] Validar no cluster AWS: pod Running
 - [ ] Validar: microsserviço enviando spans visíveis no New Relic
 
 **Variável de ambiente nos microsserviços:**
