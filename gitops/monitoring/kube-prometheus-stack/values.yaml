@@ -39,10 +39,12 @@ grafana:
   adminPassword: ""  # gerenciado via secret externo (grafana-admin-secret)
   existingSecret: grafana-admin-secret
   adminUser: admin
-  # Injeta PAGERDUTY_KEY e DISCORD_WEBHOOK como env vars no container Grafana
+  # Injeta credenciais de alerting e self-healing como env vars no container Grafana
   extraEnvFrom:
     - secretRef:
         name: grafana-alerting-secrets
+    - secretRef:
+        name: grafana-github-pat
   sidecar:
     dashboards:
       enabled: true
@@ -94,6 +96,20 @@ grafana:
                   **[{{ .Status | toUpper }}]** {{ .CommonAnnotations.summary }}
                   Severity: {{ .CommonLabels.severity }}
               disableResolveMessage: false
+        - orgId: 1
+          name: Self-Healing
+          receivers:
+            - uid: self-healing-receiver
+              type: webhook
+              settings:
+                url: https://api.github.com/repos/lcsbm/togglemaster-fase4/actions/workflows/self-healing.yml/dispatches
+                httpMethod: POST
+                authorization_scheme: Bearer
+                authorization_credentials: ${GITHUB_PAT}
+                # GitHub Actions API requer header Accept explícito
+                # O body é fixo: reinicia auth-service como demonstração do self-healing
+                body: '{"ref":"main","inputs":{"service":"auth-service","namespace":"togglemaster"}}'
+              disableResolveMessage: true
 
     policies.yaml:
       apiVersion: 1
@@ -106,6 +122,10 @@ grafana:
           repeatInterval: 4h
           routes:
             - receiver: PagerDuty
+              matchers:
+                - severity = critical
+              continue: true
+            - receiver: Self-Healing
               matchers:
                 - severity = critical
               continue: true
