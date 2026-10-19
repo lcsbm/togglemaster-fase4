@@ -14,8 +14,8 @@
 | 0 | Migração da base da Fase 3 | ✅ Concluído |
 | 1 | Stack de monitoramento no GitOps | ✅ Concluído |
 | 2 | OTel Collector | ✅ Concluído |
-| 3 | Instrumentação dos microsserviços | 🔄 Em andamento |
-| 4 | APM — New Relic | ⬜ Pendente |
+| 3 | Instrumentação dos microsserviços | ✅ Concluído |
+| 4 | APM — New Relic | ✅ Concluído |
 | 5 | Alertas + PagerDuty + Discord | ⬜ Pendente |
 | 6 | Self-Healing (GitHub Action) | ⬜ Pendente |
 | 7 | Terraform apply + validação E2E | ⬜ Pendente |
@@ -124,16 +124,16 @@ OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
 
 ---
 
-## Etapa 4 — APM New Relic
+## Etapa 4 — APM New Relic ✅
 
 > Objetivo: Service Map dos 5 serviços + Distributed Tracing visível no painel.
 
-- [ ] Criar conta New Relic free tier (education)
-- [ ] Obter License Key e OTLP endpoint region (US: `otlp.nr-data.net:443`)
-- [ ] Adicionar License Key no AWS Secrets Manager (`togglemaster/observability`)
-- [ ] Criar ExternalSecret para expor `NEW_RELIC_LICENSE_KEY` ao OTel Collector
-- [ ] Configurar header `api-key` no exporter OTLP do Collector
-- [ ] Validar: painel New Relic > APM > Services mostrando os 5 serviços
+- [x] Criar conta New Relic free tier (US region)
+- [x] Obter License Key (INGEST - LICENSE)
+- [x] Adicionar License Key no AWS Secrets Manager (`togglemaster/new-relic`) como JSON `{"license_key":"..."}`)
+- [x] ExternalSecret criado em `gitops/monitoring/otel-collector/externalsecret.yaml`
+- [x] OTel Collector configurado com exporter `otlp/newrelic` → `otlp.nr-data.net:4317`
+- [ ] Validar no cluster AWS: painel New Relic > APM > Services mostrando os 5 serviços
 - [ ] Validar: Service Map com dependências visíveis
 - [ ] Validar: trace distribuído de `/evaluate` (auth → evaluation → redis/sqs)
 - [ ] Screenshot do Service Map para entregável
