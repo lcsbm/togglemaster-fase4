@@ -6,3 +6,6 @@ metadata:
 data:
   PORT: "8002"
   AUTH_SERVICE_URL: "http://auth-service:8001"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.monitoring.svc.cluster.local:4317"
+  OTEL_SERVICE_NAME: "flag-service"
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=production"

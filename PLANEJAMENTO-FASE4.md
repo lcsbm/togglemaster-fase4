@@ -13,8 +13,8 @@
 |---|---|---|
 | 0 | Migração da base da Fase 3 | ✅ Concluído |
 | 1 | Stack de monitoramento no GitOps | ✅ Concluído |
-| 2 | OTel Collector | 🔄 Em andamento |
-| 3 | Instrumentação dos microsserviços | ⬜ Pendente |
+| 2 | OTel Collector | ✅ Concluído |
+| 3 | Instrumentação dos microsserviços | 🔄 Em andamento |
 | 4 | APM — New Relic | ⬜ Pendente |
 | 5 | Alertas + PagerDuty + Discord | ⬜ Pendente |
 | 6 | Self-Healing (GitHub Action) | ⬜ Pendente |

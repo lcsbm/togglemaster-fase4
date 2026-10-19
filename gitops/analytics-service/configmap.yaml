@@ -7,3 +7,6 @@ data:
   PORT: "8005"
   AWS_REGION: "us-east-1"
   AWS_DYNAMODB_TABLE: "analytics-events"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.monitoring.svc.cluster.local:4317"
+  OTEL_SERVICE_NAME: "analytics-service"
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=production"
