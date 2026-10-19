@@ -5,11 +5,10 @@ go 1.21
 require (
 	github.com/jackc/pgx/v5 v5.9.0
 	github.com/joho/godotenv v1.5.1
-)
-
-require (
-	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
+	go.opentelemetry.io/otel v1.43.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.43.0
+	go.opentelemetry.io/otel/sdk v1.43.0
+	golang.org/x/net v0.60.0
+	google.golang.org/grpc v1.83.2
 )

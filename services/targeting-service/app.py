@@ -10,14 +10,35 @@ from dotenv import load_dotenv
 from functools import wraps
 import logging
 
-# Configura o logging
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-# Carrega .env para desenvolvimento local
-load_dotenv() 
+load_dotenv()
+
+def _init_otel():
+    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "otel-collector.monitoring.svc.cluster.local:4317")
+    svc_name = os.getenv("OTEL_SERVICE_NAME", "targeting-service")
+    try:
+        provider = TracerProvider(resource=Resource({SERVICE_NAME: svc_name}))
+        provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
+        trace.set_tracer_provider(provider)
+        RequestsInstrumentor().instrument()
+        log.info(f"OTEL: TracerProvider inicializado (endpoint: {endpoint}, service: {svc_name})")
+    except Exception as e:
+        log.warning(f"OTEL: falha ao inicializar — traces desabilitados: {e}")
+
+_init_otel()
 
 app = Flask(__name__)
+FlaskInstrumentor().instrument_app(app)
 
 # --- Configuração ---
 DATABASE_URL = os.getenv("DATABASE_URL")
