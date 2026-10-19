@@ -14,7 +14,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  AWS_ROLE_ARN: arn:aws:iam::603727984890:role/CICD-terraform-infra
+  AWS_ROLE_ARN: arn:aws:iam::603727984890:role/CICD-self-healing
   EKS_CLUSTER: togglemaster
 
 jobs:

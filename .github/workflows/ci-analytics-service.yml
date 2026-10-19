@@ -1,4 +1,4 @@
-name: CI — analytics-service
+﻿name: CI â€” analytics-service
 
 on:
   push:
@@ -97,7 +97,7 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::603727984890:role/CICD-terraform-infra
+          role-to-assume: arn:aws:iam::603727984890:role/CICD-ecr-push
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR

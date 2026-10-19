@@ -1,4 +1,4 @@
-name: CI — flag-service
+﻿name: CI â€” flag-service
 
 on:
   push:
@@ -66,7 +66,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # SCA — Trivy escaneia requirements.txt em busca de CVEs críticos
+      # SCA â€” Trivy escaneia requirements.txt em busca de CVEs crÃ­ticos
       - name: Trivy SCA (filesystem)
         uses: aquasecurity/trivy-action@master
         with:
@@ -76,7 +76,7 @@ jobs:
           exit-code: '1'
           format: 'table'
 
-      # SAST — bandit analisa o código Python
+      # SAST â€” bandit analisa o cÃ³digo Python
       - name: bandit SAST
         run: |
           pip install bandit
@@ -99,7 +99,7 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::603727984890:role/CICD-terraform-infra
+          role-to-assume: arn:aws:iam::603727984890:role/CICD-ecr-push
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR

@@ -1,4 +1,4 @@
-name: CI — auth-service
+﻿name: CI â€” auth-service
 
 on:
   push:
@@ -18,7 +18,7 @@ env:
   ECR_REPOSITORY: togglemaster/auth-service
 
 jobs:
-  # ── 1. Build & Unit Test ──────────────────────────────────────────────────
+  # â”€â”€ 1. Build & Unit Test â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   build-test:
     name: Build & Test
     runs-on: ubuntu-latest
@@ -41,7 +41,7 @@ jobs:
         working-directory: services/auth-service
         run: go test ./... -v -count=1
 
-  # ── 2. Lint ───────────────────────────────────────────────────────────────
+  # â”€â”€ 2. Lint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -61,7 +61,7 @@ jobs:
         working-directory: services/auth-service
         run: go vet ./...
 
-  # ── 3. Security Scan (SAST + SCA) ────────────────────────────────────────
+  # â”€â”€ 3. Security Scan (SAST + SCA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   security:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -77,7 +77,7 @@ jobs:
         working-directory: services/auth-service
         run: go mod tidy
 
-      # SCA — Trivy escaneia dependências (go.sum) em busca de CVEs
+      # SCA â€” Trivy escaneia dependÃªncias (go.sum) em busca de CVEs
       - name: Trivy SCA (filesystem)
         uses: aquasecurity/trivy-action@master
         with:
@@ -87,13 +87,13 @@ jobs:
           exit-code: '1'
           format: 'table'
 
-      # SAST — gosec analisa o código-fonte Go
+      # SAST â€” gosec analisa o cÃ³digo-fonte Go
       - name: gosec SAST
         uses: securego/gosec@master
         with:
           args: '-severity high -confidence high ./services/auth-service/...'
 
-  # ── 4. Docker Build, Scan & Push ─────────────────────────────────────────
+  # â”€â”€ 4. Docker Build, Scan & Push â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   docker-push:
     name: Docker Build & Push
     runs-on: ubuntu-latest
@@ -111,7 +111,7 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::603727984890:role/CICD-terraform-infra
+          role-to-assume: arn:aws:iam::603727984890:role/CICD-ecr-push
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
