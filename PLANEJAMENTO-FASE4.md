@@ -16,7 +16,7 @@
 | 2 | OTel Collector | ✅ Concluído |
 | 3 | Instrumentação dos microsserviços | ✅ Concluído |
 | 4 | APM — New Relic | ✅ Concluído |
-| 5 | Alertas + PagerDuty + Discord | ⬜ Pendente |
+| 5 | Alertas + PagerDuty + Discord | ✅ Concluído |
 | 6 | Self-Healing (GitHub Action) | ⬜ Pendente |
 | 7 | Terraform apply + validação E2E | ⬜ Pendente |
 
