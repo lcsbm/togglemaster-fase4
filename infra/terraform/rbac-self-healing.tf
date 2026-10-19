@@ -1,12 +1,16 @@
 # ── EKS access entry para CICD-self-healing ──────────────────────────────────
-# Cria a identidade Kubernetes para o role IAM.
-# Nenhuma access policy da AWS é associada — permissões vêm apenas do RBAC abaixo.
+# O role IAM é criado manualmente (fora do Terraform).
+# O data source lê o ARN para criar o access entry e o RBAC.
+
+data "aws_iam_role" "cicd_self_healing" {
+  name = "CICD-self-healing"
+}
 
 resource "aws_eks_access_entry" "cicd_self_healing" {
   cluster_name      = module.eks.cluster_name
-  principal_arn     = aws_iam_role.cicd_self_healing.arn
+  principal_arn     = data.aws_iam_role.cicd_self_healing.arn
   kubernetes_groups = []
-  # username limpo facilita o RoleBinding — sem ARN dinâmico de sessão
+  # Username limpo facilita o RoleBinding — sem ARN dinâmico de sessão
   user_name = "cicd-self-healing"
   type      = "STANDARD"
 
