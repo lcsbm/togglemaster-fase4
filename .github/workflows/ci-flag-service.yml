@@ -1,4 +1,4 @@
-﻿name: CI â€” flag-service
+﻿name: CI - flag-service
 
 on:
   push:
@@ -66,7 +66,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # SCA â€” Trivy escaneia requirements.txt em busca de CVEs crÃ­ticos
+      # SCA — Trivy escaneia requirements.txt em busca de CVEs criticos
       - name: Trivy SCA (filesystem)
         uses: aquasecurity/trivy-action@master
         with:
@@ -76,7 +76,7 @@ jobs:
           exit-code: '1'
           format: 'table'
 
-      # SAST â€” bandit analisa o cÃ³digo Python
+      # SAST — bandit analisa o cÃ³digo Python
       - name: bandit SAST
         run: |
           pip install bandit
