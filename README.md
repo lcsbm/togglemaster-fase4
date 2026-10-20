@@ -1,6 +1,6 @@
 # ToggleMaster - Fase 4: Observabilidade
 
-**FIAP POSTECH - DevOps e Arquitetura Cloud**
+**FIAP POSTECH - DevOps e Arquitetura Cloud** -
 **RM 373161 - Lucas Santana Bezerra de Melo**
 
 Fase 4 do Tech Challenge. Adiciona observabilidade completa à plataforma de feature flags ToggleMaster: métricas, logs centralizados, distributed tracing, alertas inteligentes e self-healing automatizado.
