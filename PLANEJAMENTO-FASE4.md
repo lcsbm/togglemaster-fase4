@@ -1,7 +1,7 @@
 # Planejamento — ToggleMaster Fase 4
 
 **FIAP POSTECH — DevOps e Arquitetura Cloud**
-**RM 373161 — Lucas Sousa Beraldi Moreira**
+**RM 373161 — Lucas Santana Bezerra de Melo**
 
 > Documento de acompanhamento de progresso. Atualizar os checkboxes conforme cada item for concluído.
 
