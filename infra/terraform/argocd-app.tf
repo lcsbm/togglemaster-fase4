@@ -26,6 +26,8 @@ resource "kubectl_manifest" "argocd_app" {
           selfHeal: true
         syncOptions:
           - CreateNamespace=true
+          - ServerSideApply=true
+          - SkipDryRunOnMissingResource=true
   YAML
 
   depends_on = [helm_release.argocd]
