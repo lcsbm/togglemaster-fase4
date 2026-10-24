@@ -17,6 +17,18 @@ resource "aws_eks_access_entry" "cicd_self_healing" {
   tags = local.common_tags
 }
 
+# ── Namespace togglemaster (criado aqui para existir antes do RBAC) ───────────
+# ArgoCD faz a gestão dos recursos dentro do namespace; o namespace em si
+# precisa existir antes de kubernetes_role ser criado.
+
+resource "kubernetes_namespace" "togglemaster" {
+  metadata {
+    name = var.project
+  }
+
+  depends_on = [helm_release.argocd]
+}
+
 # ── K8s RBAC: Role mínimo no namespace togglemaster ──────────────────────────
 # kubectl rollout restart  → PATCH em deployments
 # kubectl rollout status   → GET + WATCH em deployments
@@ -26,6 +38,8 @@ resource "kubernetes_role" "self_healing" {
     name      = "self-healing"
     namespace = var.project
   }
+
+  depends_on = [kubernetes_namespace.togglemaster]
 
   rule {
     api_groups = ["apps"]
