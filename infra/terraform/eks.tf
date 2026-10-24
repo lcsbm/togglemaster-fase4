@@ -13,6 +13,9 @@ module "eks" {
   cluster_endpoint_public_access_cidrs     = var.eks_public_access_cidrs
   enable_cluster_creator_admin_permissions = true
 
+  # Evita conflito de "already exists" no apply/destroy
+  create_cloudwatch_log_group = false
+
   eks_managed_node_groups = {
     workers = {
       ami_type       = "AL2023_x86_64_STANDARD"
