@@ -5,6 +5,9 @@ metadata:
   namespace: monitoring
   labels:
     app: otel-collector
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   selector:
     matchLabels:
