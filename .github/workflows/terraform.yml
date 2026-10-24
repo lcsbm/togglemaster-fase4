@@ -117,7 +117,7 @@ jobs:
         run: exit 1
 
       - name: Upload tfplan artifact
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ github.sha }}
@@ -129,7 +129,7 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
     needs: plan
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     environment: production  # Requer aprovação manual — configure em Settings → Environments
     permissions:
       contents: read
