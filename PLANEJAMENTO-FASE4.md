@@ -88,38 +88,38 @@ OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
 > Objetivo: adicionar bibliotecas OTel ao código-fonte de cada serviço para gerar traces, métricas e logs estruturados.
 
 ### auth-service (Go)
-- [ ] Adicionar deps: `go.opentelemetry.io/otel`, `otlpgrpc`, `otelhttp`
-- [ ] Inicializar TracerProvider em `main.go`
-- [ ] Instrumentar rotas HTTP com `otelhttp.NewHandler`
-- [ ] Atualizar `go.mod` / `go.sum`
+- [x] Adicionar deps: `go.opentelemetry.io/otel`, `otlpgrpc`, `otelhttp`
+- [x] Inicializar TracerProvider em `main.go` (via `otel.go`)
+- [x] Instrumentar rotas HTTP com `otelhttp.NewHandler`
+- [x] Atualizar `go.mod` / `go.sum`
 - [ ] Validar: traces aparecem no New Relic com service name `auth-service`
 
 ### evaluation-service (Go)
-- [ ] Mesmas deps de OTel que auth-service
-- [ ] Instrumentar rotas HTTP
-- [ ] Adicionar span manual para chamada ao Redis (cache hit/miss)
-- [ ] Adicionar span manual para envio ao SQS
+- [x] Mesmas deps de OTel que auth-service
+- [x] Instrumentar rotas HTTP
+- [x] Adicionar span manual para chamada ao Redis (cache hit/miss)
+- [x] Adicionar span manual para envio ao SQS
 - [ ] Validar: trace E2E mostrando caminho de `/evaluate`
 
 ### flag-service (Python)
-- [ ] Adicionar deps: `opentelemetry-sdk`, `opentelemetry-exporter-otlp`, `opentelemetry-instrumentation-flask`
-- [ ] Auto-instrumentar Flask com `FlaskInstrumentor`
-- [ ] Atualizar `requirements.txt`
+- [x] Adicionar deps: `opentelemetry-sdk`, `opentelemetry-exporter-otlp`, `opentelemetry-instrumentation-flask`
+- [x] Auto-instrumentar Flask com `FlaskInstrumentor`
+- [x] Atualizar `requirements.txt`
 - [ ] Validar: traces no New Relic com service name `flag-service`
 
 ### targeting-service (Python)
-- [ ] Mesmas deps de OTel que flag-service
-- [ ] Auto-instrumentar Flask
+- [x] Mesmas deps de OTel que flag-service
+- [x] Auto-instrumentar Flask
 - [ ] Validar: traces no New Relic com service name `targeting-service`
 
 ### analytics-service (Python)
-- [ ] Mesmas deps de OTel que flag-service
-- [ ] Instrumentar consumer loop do SQS (span por mensagem processada)
+- [x] Mesmas deps de OTel que flag-service
+- [x] Instrumentar consumer loop do SQS (span por mensagem processada)
 - [ ] Validar: traces no New Relic com service name `analytics-service`
 
 ### Dockerfiles / ConfigMaps
-- [ ] Adicionar `OTEL_EXPORTER_OTLP_ENDPOINT` nos ConfigMaps de cada serviço (`gitops/*/configmap.yaml`)
-- [ ] Adicionar `OTEL_SERVICE_NAME` e `OTEL_RESOURCE_ATTRIBUTES` nos ConfigMaps
+- [x] Adicionar `OTEL_EXPORTER_OTLP_ENDPOINT` nos ConfigMaps de cada serviço (`gitops/*/configmap.yaml`)
+- [x] Adicionar `OTEL_SERVICE_NAME` e `OTEL_RESOURCE_ATTRIBUTES` nos ConfigMaps
 - [ ] Rebuild das imagens via CI/CD (push → ArgoCD sync automático)
 
 ---
@@ -145,27 +145,27 @@ OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
 > Objetivo: alerta ativo quando taxa de erros 5xx > 5%, incidente no PagerDuty e notificação no Discord.
 
 ### Alerta no Grafana
-- [ ] Criar Alert Rule: `rate(http_requests_total{status=~"5.."}[5m]) > 0.05`
+- [x] Criar Alert Rule: `rate(http_requests_total{status=~"5.."}[5m]) > 0.05`
   - Serviço alvo: `auth-service` (ou todos os serviços)
   - For: 1 minuto
   - Labels: `severity=critical`, `service=auth-service`
-- [ ] Provisionar regra via ConfigMap no GitOps (`gitops/monitoring/grafana/alertrule.yaml`)
+- [x] Provisionar regra via values.yaml (`grafana.alerting.rules.yaml`)
 
 ### PagerDuty
-- [ ] Criar conta PagerDuty free tier
-- [ ] Criar Service com integration "Grafana"
-- [ ] Obter Integration Key
-- [ ] Adicionar Integration Key no AWS Secrets Manager (`togglemaster/pagerduty`)
-- [ ] Configurar Contact Point no Grafana (PagerDuty)
-- [ ] Configurar Notification Policy: todos os alertas `severity=critical` → PagerDuty
+- [x] Criar conta PagerDuty free tier
+- [x] Criar Service com integration "Grafana"
+- [x] Obter Integration Key
+- [x] Adicionar Integration Key no AWS Secrets Manager (`togglemaster/pagerduty`)
+- [x] Configurar Contact Point no Grafana (PagerDuty) — provisionado via `grafana.alerting.contactpoints.yaml`
+- [x] Configurar Notification Policy: todos os alertas `severity=critical` → PagerDuty
 - [ ] Validar: incidente aberto automaticamente no PagerDuty quando alerta dispara
 
 ### Discord
-- [ ] Criar canal `#alerts-togglemaster` no Discord (ou usar existente)
-- [ ] Criar Webhook no Discord
-- [ ] Adicionar Webhook URL no AWS Secrets Manager (`togglemaster/discord`)
-- [ ] Configurar Contact Point no Grafana (Discord)
-- [ ] Configurar Notification Policy: todos os alertas → Discord
+- [x] Criar canal `#alerts-togglemaster` no Discord (ou usar existente)
+- [x] Criar Webhook no Discord
+- [x] Adicionar Webhook URL no AWS Secrets Manager (`togglemaster/discord`)
+- [x] Configurar Contact Point no Grafana (Discord) — provisionado via `grafana.alerting.contactpoints.yaml`
+- [x] Configurar Notification Policy: todos os alertas → Discord
 - [ ] Validar: mensagem de alerta chegando no canal Discord
 
 ---
@@ -175,21 +175,21 @@ OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
 > Objetivo: quando um alerta dispara no Grafana, o sistema reage automaticamente executando `kubectl rollout restart`.
 
 ### GitHub Action
-- [ ] Criar `.github/workflows/self-healing.yml`
+- [x] Criar `.github/workflows/self-healing.yml`
   - Trigger: `workflow_dispatch` com inputs `service` e `namespace`
   - Step 1: configure AWS credentials (OIDC)
   - Step 2: `aws eks update-kubeconfig`
   - Step 3: `kubectl rollout restart deployment/${{ inputs.service }} -n ${{ inputs.namespace }}`
   - Step 4: `kubectl rollout status deployment/${{ inputs.service }} -n ${{ inputs.namespace }}`
-- [ ] Criar Personal Access Token (PAT) com escopo `workflow`
-- [ ] Adicionar PAT no AWS Secrets Manager (`togglemaster/github-pat`)
+- [x] Criar Personal Access Token (PAT) com escopo `workflow`
+- [x] Adicionar PAT no AWS Secrets Manager (`togglemaster/github-pat`)
 
 ### Webhook do Grafana → GitHub Action
-- [ ] Criar Contact Point no Grafana do tipo "Webhook"
+- [x] Criar Contact Point no Grafana do tipo "Webhook" — provisionado via `grafana.alerting.contactpoints.yaml`
   - URL: `https://api.github.com/repos/lcsbm/togglemaster-fase4/actions/workflows/self-healing.yml/dispatches`
-  - Headers: `Authorization: Bearer <PAT>`, `Accept: application/vnd.github+json`
+  - Headers: `Authorization: Bearer ${GITHUB_PAT}` (via ExternalSecret)
   - Body: `{"ref":"main","inputs":{"service":"auth-service","namespace":"togglemaster"}}`
-- [ ] Incluir este Contact Point na Notification Policy do alerta
+- [x] Incluir este Contact Point na Notification Policy do alerta
 - [ ] Validar: alerta dispara → GitHub Action executa → pod reinicia automaticamente
 - [ ] Screenshot do workflow executado para entregável
 
