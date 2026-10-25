@@ -37,9 +37,11 @@ alertmanager:
 
 grafana:
   enabled: true
-  adminUser: admin
-  existingSecret: grafana-admin-secret
-  adminPassword: ""
+  # Credenciais lidas do AWS Secrets Manager via ExternalSecret → grafana-admin-secret
+  admin:
+    existingSecret: grafana-admin-secret
+    userKey: admin-user
+    passwordKey: admin-password
   # Injeta credenciais de alerting e self-healing como env vars no container Grafana
   extraEnvFrom:
     - secretRef:
