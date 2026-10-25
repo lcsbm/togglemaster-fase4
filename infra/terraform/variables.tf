@@ -18,7 +18,7 @@ variable "eks_node_type" {
 
 variable "eks_desired_nodes" {
   type    = number
-  default = 2
+  default = 3
 }
 
 variable "eks_min_nodes" {
