@@ -95,9 +95,10 @@ func main() {
 		log.Println("Cliente SQS inicializado com sucesso.")
 	}
 
-	// Cliente HTTP (com timeout)
+	// Cliente HTTP com OTel transport — propaga traceparent para flag/targeting-service
 	httpClient := &http.Client{
-		Timeout: 5 * time.Second,
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
+		Timeout:   5 * time.Second,
 	}
 
 	// Cria a instância da App
