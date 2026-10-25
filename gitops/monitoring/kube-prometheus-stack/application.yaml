@@ -28,6 +28,17 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      name: kube-prometheus-stack-admission
+      jsonPointers:
+        - /webhooks/0/clientConfig/caBundle
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: kube-prometheus-stack-admission
+      jsonPointers:
+        - /webhooks/0/clientConfig/caBundle
   syncPolicy:
     automated:
       prune: true
