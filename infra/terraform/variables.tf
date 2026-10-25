@@ -28,7 +28,7 @@ variable "eks_min_nodes" {
 
 variable "eks_max_nodes" {
   type    = number
-  default = 3
+  default = 4
 }
 
 variable "eks_public_access_cidrs" {
