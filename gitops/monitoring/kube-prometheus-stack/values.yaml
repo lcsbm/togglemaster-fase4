@@ -93,8 +93,8 @@ grafana:
               settings:
                 url: ${DISCORD_WEBHOOK}
                 message: |
-                  **[{{ .Status | toUpper }}]** {{ .CommonAnnotations.summary }}
-                  Severity: {{ .CommonLabels.severity }}
+                  **[{{ "{{" }} .Status | toUpper {{ "}}" }}]** {{ "{{" }} .CommonAnnotations.summary {{ "}}" }}
+                  Severity: {{ "{{" }} .CommonLabels.severity {{ "}}" }}
               disableResolveMessage: false
         - orgId: 1
           name: Self-Healing
