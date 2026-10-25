@@ -63,6 +63,8 @@ grafana:
       url: http://loki-stack.monitoring.svc.cluster.local:3100
       access: proxy
       isDefault: false
+      jsonData:
+        manageAlerts: false
   resources:
     requests:
       cpu: 100m
