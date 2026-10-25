@@ -22,7 +22,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: flag-service
-          image: 603727984890.dkr.ecr.us-east-1.amazonaws.com/togglemaster/flag-service:sha-1a60354
+          image: 603727984890.dkr.ecr.us-east-1.amazonaws.com/togglemaster/flag-service:sha-b5f38ad
           securityContext:
             runAsUser: 100
           ports:
