@@ -43,6 +43,26 @@ jobs:
         run: aws eks update-kubeconfig --name togglemaster --region ${{ env.AWS_REGION }}
         continue-on-error: true
 
+      - name: Pre-remove ArgoCD apps and stuck namespaces
+        run: |
+          # Remove finalizer da Application togglemaster para desbloquear o namespace
+          kubectl patch application togglemaster -n argocd \
+            -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+
+          # Aguarda ArgoCD iniciar cascade delete (ou já está destruído)
+          sleep 5
+
+          # Force-remove finalizers do namespace togglemaster caso esteja em Terminating
+          kubectl patch namespace togglemaster \
+            -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+
+          # Deleta namespaces de outros addons via API de finalizers
+          for ns in keda external-secrets argocd ingress-nginx monitoring; do
+            kubectl patch namespace "$ns" \
+              -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+          done
+        continue-on-error: true
+
       - name: Pre-remove Helm releases
         run: |
           for release in keda external-secrets argocd ingress-nginx metrics-server; do
