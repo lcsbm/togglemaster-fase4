@@ -22,7 +22,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: analytics-service
-          image: 603727984890.dkr.ecr.us-east-1.amazonaws.com/togglemaster/analytics-service:sha-fb94908
+          image: 603727984890.dkr.ecr.us-east-1.amazonaws.com/togglemaster/analytics-service:sha-1a60354
           securityContext:
             runAsUser: 100
           ports:
