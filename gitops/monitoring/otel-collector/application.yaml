@@ -11,6 +11,9 @@ spec:
     repoURL: https://github.com/lcsbm/togglemaster-fase4
     targetRevision: main
     path: gitops/monitoring/otel-collector
+    directory:
+      recurse: false
+      exclude: 'application.yaml'
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
