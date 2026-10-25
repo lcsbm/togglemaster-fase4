@@ -18,12 +18,12 @@ variable "eks_node_type" {
 
 variable "eks_desired_nodes" {
   type    = number
-  default = 3
+  default = 2
 }
 
 variable "eks_min_nodes" {
   type    = number
-  default = 1
+  default = 2
 }
 
 variable "eks_max_nodes" {
