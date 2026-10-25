@@ -56,6 +56,15 @@ jobs:
 
       - name: Terraform Destroy
         working-directory: ${{ env.TF_DIR }}
+        timeout-minutes: 360
+        # Primeira passada — pode falhar em SGs/rules já deletados pela AWS junto com o EKS
+        run: terraform destroy -auto-approve || true
+        env:
+          TF_VAR_project: togglemaster
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Destroy (retry — limpa recursos órfãos do state)
+        working-directory: ${{ env.TF_DIR }}
         timeout-minutes: 60
         run: terraform destroy -auto-approve
         env:
