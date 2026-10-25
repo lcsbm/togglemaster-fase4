@@ -26,6 +26,11 @@ module "eks" {
         }
       })
     }
+    # EBS CSI Driver: obrigatório no EKS 1.27+ (provisioner in-tree kubernetes.io/aws-ebs removido)
+    aws-ebs-csi-driver = {
+      most_recent              = true
+      service_account_role_arn = module.ebs_csi_irsa.iam_role_arn
+    }
   }
 
   eks_managed_node_groups = {

@@ -6,7 +6,7 @@ loki:
   persistence:
     enabled: true
     size: 10Gi
-    storageClassName: gp2
+    storageClassName: gp3
   config:
     limits_config:
       retention_period: 168h  # 7 dias
