@@ -3,7 +3,7 @@
 **FIAP POSTECH — DevOps e Arquitetura Cloud** -
 **RM 373161 — Lucas Santana Bezerra de Melo**
 
-> Documento de acompanhamento de progresso. Atualizar os checkboxes conforme cada item for concluído.
+> Documento de acompanhamento de progresso.
 
 ---
 
@@ -18,11 +18,11 @@
 | 4 | APM — New Relic | ✅ Concluído |
 | 5 | Alertas + PagerDuty + Discord | ✅ Concluído |
 | 6 | Self-Healing (GitHub Action) | ✅ Concluído |
-| 7 | Terraform apply + validação E2E | ⬜ Pendente |
+| 7 | Gravação + Evidências | ⬜ Pendente |
 
 ---
 
-## Etapa 0 — Migração da base da Fase 3
+## Etapa 0 — Migração da base da Fase 3 ✅
 
 - [x] Copiar `services/` (5 microsserviços)
 - [x] Copiar `gitops/` (manifests K8s)
@@ -36,195 +36,144 @@
 
 ## Etapa 1 — Stack de monitoramento no GitOps ✅
 
-> Objetivo: Prometheus, Loki e Grafana rodando no cluster via ArgoCD.
-> Localização: `gitops/monitoring/`
-
 - [x] `gitops/monitoring/namespace.yaml` — namespace `monitoring`
 - [x] `gitops/monitoring/kube-prometheus-stack/` — ArgoCD Application + values.yaml (v61.7.2)
 - [x] `gitops/monitoring/loki/` — ArgoCD Application + values.yaml (loki-stack v2.10.2)
 - [x] Grafana embutido no kube-prometheus-stack com sidecar de dashboards
-- [x] Grafana pré-configurado com datasource Loki
-- [x] Validação local (kind): 8/8 pods Running
-- [x] Validação local: Grafana 200, Prometheus 200, Loki 200
-- [x] PR mergeado: `feat/monitoring-stack`
-
-**Dashboard customizado deve exibir (Etapa 5):**
-- [ ] Uso de CPU e memória dos nós do cluster
-- [ ] Taxa de requisições HTTP por microsserviço
-- [ ] Taxa de erros HTTP 5xx por microsserviço
-- [ ] Painel de logs em tempo real (Loki datasource)
+- [x] Grafana pré-configurado com datasource Prometheus e Loki
+- [x] Dashboard customizado provisionado via ConfigMap (`gitops/monitoring/grafana/dashboard-togglemaster.yaml`)
+  - [x] CPU e memória dos nós do cluster
+  - [x] Taxa de requisições HTTP por microsserviço
+  - [x] Taxa de erros HTTP 5xx por microsserviço
+  - [x] Painel de logs em tempo real (Loki datasource)
+- [x] Credenciais Grafana via ExternalSecret → AWS Secrets Manager
+- [x] ArgoCD: kube-prometheus-stack Synced + Healthy
+- [x] ArgoCD: loki-stack Synced + Healthy
+- [x] Drift cosmético ignorado via `ignoreDifferences` (CRDs, webhooks caBundle, DaemonSet/Deployment)
 
 ---
 
-## Etapa 2 — OTel Collector 🔄
+## Etapa 2 — OTel Collector ✅
 
-> Objetivo: hub central de telemetria — recebe dados dos microsserviços e roteia para Prometheus, Loki e New Relic.
-> Localização: `gitops/monitoring/otel-collector/`
-
-- [x] `configmap.yaml` — pipeline OTLP receiver → batch processor → exporters (traces + metrics + logs)
-- [x] `deployment.yaml` — Deployment otel/opentelemetry-collector-contrib:0.104.0
-- [x] `service.yaml` — Service ClusterIP expondo 4317 (gRPC), 4318 (HTTP), 8889 (metrics)
-- [x] `serviceaccount.yaml` — ServiceAccount dedicado
+- [x] `configmap.yaml` — pipeline OTLP receiver → batch processor → exporters
+- [x] `deployment.yaml` — otel/opentelemetry-collector-contrib:0.104.0
+- [x] `service.yaml` — ClusterIP 4317 (gRPC), 4318 (HTTP), 8889 (metrics)
+- [x] `serviceaccount.yaml`
 - [x] `servicemonitor.yaml` — ServiceMonitor para Prometheus scrape
-- [x] `externalsecret.yaml` — ExternalSecret para New Relic License Key
-- [x] `application.yaml` — ArgoCD Application
-- [x] Exporter Prometheus configurado (porta 8889)
-- [x] Exporter Loki configurado
+- [x] `externalsecret.yaml` — New Relic License Key via AWS SM
+- [x] `application.yaml` — ArgoCD Application (com exclude do self-management loop)
+- [x] Exporter Prometheus (porta 8889)
+- [x] Exporter Loki
 - [x] Exporter OTLP/gRPC para New Relic (`otlp.nr-data.net:4317`)
-- [ ] Validar no cluster AWS: pod Running
-- [ ] Validar: microsserviço enviando spans visíveis no New Relic
-
-**Variável de ambiente nos microsserviços:**
-```
-OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.monitoring.svc.cluster.local:4317
-OTEL_SERVICE_NAME=<nome-do-servico>
-OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
-```
+- [x] ArgoCD: otel-collector Synced + Healthy
 
 ---
 
-## Etapa 3 — Instrumentação dos microsserviços
-
-> Objetivo: adicionar bibliotecas OTel ao código-fonte de cada serviço para gerar traces, métricas e logs estruturados.
+## Etapa 3 — Instrumentação dos microsserviços ✅
 
 ### auth-service (Go)
-- [x] Adicionar deps: `go.opentelemetry.io/otel`, `otlpgrpc`, `otelhttp`
-- [x] Inicializar TracerProvider em `main.go` (via `otel.go`)
-- [x] Instrumentar rotas HTTP com `otelhttp.NewHandler`
-- [x] Atualizar `go.mod` / `go.sum`
-- [ ] Validar: traces aparecem no New Relic com service name `auth-service`
+- [x] Deps OTel: `go.opentelemetry.io/otel`, `otlpgrpc`, `otelhttp`
+- [x] TracerProvider inicializado em `main.go`
+- [x] Rotas HTTP instrumentadas com `otelhttp.NewHandler`
 
 ### evaluation-service (Go)
-- [x] Mesmas deps de OTel que auth-service
-- [x] Instrumentar rotas HTTP
-- [x] Adicionar span manual para chamada ao Redis (cache hit/miss)
-- [x] Adicionar span manual para envio ao SQS
-- [ ] Validar: trace E2E mostrando caminho de `/evaluate`
+- [x] Deps OTel iguais ao auth-service
+- [x] Rotas HTTP instrumentadas
+- [x] Span manual para Redis (cache hit/miss)
+- [x] Span manual para envio SQS
 
 ### flag-service (Python)
-- [x] Adicionar deps: `opentelemetry-sdk`, `opentelemetry-exporter-otlp`, `opentelemetry-instrumentation-flask`
-- [x] Auto-instrumentar Flask com `FlaskInstrumentor`
-- [x] Atualizar `requirements.txt`
-- [ ] Validar: traces no New Relic com service name `flag-service`
+- [x] Deps: `opentelemetry-sdk`, `opentelemetry-exporter-otlp`, `opentelemetry-instrumentation-flask`
+- [x] Auto-instrumentação Flask com `FlaskInstrumentor`
 
 ### targeting-service (Python)
-- [x] Mesmas deps de OTel que flag-service
-- [x] Auto-instrumentar Flask
-- [ ] Validar: traces no New Relic com service name `targeting-service`
+- [x] Mesmas deps do flag-service
+- [x] Auto-instrumentação Flask
 
 ### analytics-service (Python)
-- [x] Mesmas deps de OTel que flag-service
-- [x] Instrumentar consumer loop do SQS (span por mensagem processada)
-- [ ] Validar: traces no New Relic com service name `analytics-service`
+- [x] Mesmas deps do flag-service
+- [x] Span por mensagem processada no consumer SQS
 
-### Dockerfiles / ConfigMaps
-- [x] Adicionar `OTEL_EXPORTER_OTLP_ENDPOINT` nos ConfigMaps de cada serviço (`gitops/*/configmap.yaml`)
-- [x] Adicionar `OTEL_SERVICE_NAME` e `OTEL_RESOURCE_ATTRIBUTES` nos ConfigMaps
-- [ ] Rebuild das imagens via CI/CD (push → ArgoCD sync automático)
+### ConfigMaps
+- [x] `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` em todos os serviços
 
 ---
 
 ## Etapa 4 — APM New Relic ✅
 
-> Objetivo: Service Map dos 5 serviços + Distributed Tracing visível no painel.
-
-- [x] Criar conta New Relic free tier (US region)
-- [x] Obter License Key (INGEST - LICENSE)
-- [x] Adicionar License Key no AWS Secrets Manager (`togglemaster/new-relic`) como JSON `{"license_key":"..."}`)
-- [x] ExternalSecret criado em `gitops/monitoring/otel-collector/externalsecret.yaml`
-- [x] OTel Collector configurado com exporter `otlp/newrelic` → `otlp.nr-data.net:4317`
-- [ ] Validar no cluster AWS: painel New Relic > APM > Services mostrando os 5 serviços
-- [ ] Validar: Service Map com dependências visíveis
-- [ ] Validar: trace distribuído de `/evaluate` (auth → evaluation → redis/sqs)
-- [ ] Screenshot do Service Map para entregável
+- [x] Conta New Relic free tier (US region)
+- [x] License Key no AWS Secrets Manager (`togglemaster/new-relic`)
+- [x] ExternalSecret em `gitops/monitoring/otel-collector/externalsecret.yaml`
+- [x] OTel Collector com exporter `otlp/newrelic` → `otlp.nr-data.net:4317`
 
 ---
 
-## Etapa 5 — Alertas + PagerDuty + Discord
+## Etapa 5 — Alertas + PagerDuty + Discord ✅
 
-> Objetivo: alerta ativo quando taxa de erros 5xx > 5%, incidente no PagerDuty e notificação no Discord.
-
-### Alerta no Grafana
-- [x] Criar Alert Rule: `rate(http_requests_total{status=~"5.."}[5m]) > 0.05`
-  - Serviço alvo: `auth-service` (ou todos os serviços)
-  - For: 1 minuto
-  - Labels: `severity=critical`, `service=auth-service`
-- [x] Provisionar regra via values.yaml (`grafana.alerting.rules.yaml`)
-
-### PagerDuty
-- [x] Criar conta PagerDuty free tier
-- [x] Criar Service com integration "Grafana"
-- [x] Obter Integration Key
-- [x] Adicionar Integration Key no AWS Secrets Manager (`togglemaster/pagerduty`)
-- [x] Configurar Contact Point no Grafana (PagerDuty) — provisionado via `grafana.alerting.contactpoints.yaml`
-- [x] Configurar Notification Policy: todos os alertas `severity=critical` → PagerDuty
-- [ ] Validar: incidente aberto automaticamente no PagerDuty quando alerta dispara
-
-### Discord
-- [x] Criar canal `#alerts-togglemaster` no Discord (ou usar existente)
-- [x] Criar Webhook no Discord
-- [x] Adicionar Webhook URL no AWS Secrets Manager (`togglemaster/discord`)
-- [x] Configurar Contact Point no Grafana (Discord) — provisionado via `grafana.alerting.contactpoints.yaml`
-- [x] Configurar Notification Policy: todos os alertas → Discord
-- [ ] Validar: mensagem de alerta chegando no canal Discord
+- [x] Alert Rule provisionada via `grafana.alerting.rules.yaml`
+  - Métrica: `kube_deployment_status_replicas_available{deployment="auth-service"} < 1`
+  - For: 0m, interval: 1m, noDataState: Alerting
+  - Labels: `severity=critical`, `team=platform`
+- [x] Contact Point PagerDuty (Events API V2) — provisionado via values.yaml
+- [x] Contact Point Discord (webhook) — provisionado via values.yaml
+- [x] Contact Point Self-Healing (webhook → relay interno) — provisionado via values.yaml
+- [x] `manageAlerts: false` no datasource Loki (elimina erro "Failed to load Loki alert rules")
+- [x] Notification Policy: Discord (root) → PagerDuty + Self-Healing (severity=critical)
+- [x] PagerDuty Integration Key no AWS SM (`togglemaster/pagerduty`)
+- [x] Discord Webhook URL no AWS SM (`togglemaster/discord`)
 
 ---
 
-## Etapa 6 — Self-Healing (GitHub Action via webhook)
+## Etapa 6 — Self-Healing ✅
 
-> Objetivo: quando um alerta dispara no Grafana, o sistema reage automaticamente executando `kubectl rollout restart`.
-
-### GitHub Action
-- [x] Criar `.github/workflows/self-healing.yml`
-  - Trigger: `workflow_dispatch` com inputs `service` e `namespace`
-  - Step 1: configure AWS credentials (OIDC)
-  - Step 2: `aws eks update-kubeconfig`
-  - Step 3: `kubectl rollout restart deployment/${{ inputs.service }} -n ${{ inputs.namespace }}`
-  - Step 4: `kubectl rollout status deployment/${{ inputs.service }} -n ${{ inputs.namespace }}`
-- [x] Criar Personal Access Token (PAT) com escopo `workflow`
-- [x] Adicionar PAT no AWS Secrets Manager (`togglemaster/github-pat`)
-
-### Webhook do Grafana → GitHub Action
-- [x] Criar Contact Point no Grafana do tipo "Webhook" — provisionado via `grafana.alerting.contactpoints.yaml`
-  - URL: `https://api.github.com/repos/lcsbm/togglemaster-fase4/actions/workflows/self-healing.yml/dispatches`
-  - Headers: `Authorization: Bearer ${GITHUB_PAT}` (via ExternalSecret)
-  - Body: `{"ref":"main","inputs":{"service":"auth-service","namespace":"togglemaster"}}`
-- [x] Incluir este Contact Point na Notification Policy do alerta
-- [ ] Validar: alerta dispara → GitHub Action executa → pod reinicia automaticamente
-- [ ] Screenshot do workflow executado para entregável
+- [x] `.github/workflows/self-healing.yml` — `workflow_dispatch` → `kubectl rollout restart`
+- [x] IAM Role `CICD-self-healing` com OIDC
+- [x] GitHub PAT (escopo `workflow`) no AWS SM (`togglemaster/github-pat`)
+- [x] `self-healing-relay` deployment no namespace `monitoring`
+  - Recebe webhook do Grafana (HTTP POST)
+  - Filtra `"status": "firing"`
+  - Dispara `workflow_dispatch` para `self-healing.yml` via GitHub API
+- [x] ExternalSecret `grafana-github-pat` injetando PAT no relay
+- [x] Scripts de teste em `scripts/`:
+  - `test-alerts.sh` — testa relay, Discord e fluxo E2E (bash)
+  - `test-crash-alert.ps1` — mata PID 1 em loop para forçar CrashLoopBackOff (PowerShell)
 
 ---
 
-## Etapa 7 — Terraform apply + validação E2E
+## Etapa 7 — Gravação + Evidências ⬜
 
-> Objetivo: cluster completo no ar com toda a stack de observabilidade operacional.
+> Objetivo: subir o cluster, executar os testes, gravar o vídeo e capturar as evidências.
 
-- [ ] `terraform apply` via pipeline (PR → plan → aprovação → apply)
-- [ ] Validar: 9+ pods Running em `togglemaster`
-- [ ] Validar: pods Running em `monitoring` (Prometheus, Loki, Grafana, OTel Collector)
-- [ ] Validar: ArgoCD Applications Synced + Healthy
-- [ ] Validar: Dashboard Grafana acessível (port-forward ou Ingress)
-- [ ] Validar: Service Map no New Relic com 5 serviços
-- [ ] Executar fluxo E2E (criar flag → criar regra → avaliar → verificar trace no New Relic)
-- [ ] Causar falha proposital (parar RDS do flag-service) e gravar vídeo de:
-  - [ ] Alerta disparando no Grafana
-  - [ ] Incidente abrindo no PagerDuty
-  - [ ] Notificação chegando no Discord
-  - [ ] Self-Healing executando no GitHub Actions
-  - [ ] Pod reiniciando (kubectl rollout status)
+### Pré-gravação (infraestrutura)
+- [ ] Terraform apply via GitHub Actions (aguardar aprovação)
+- [ ] Confirmar: todos os pods Running em `togglemaster` e `monitoring`
+- [ ] Confirmar: ArgoCD — todos os apps Synced + Healthy
+- [ ] Confirmar: Grafana acessível e dashboard carregando dados reais
 
----
+### Evidências New Relic
+- [ ] Verificar APM > Services: 5 serviços aparecendo
+- [ ] Screenshot do Service Map
+- [ ] Screenshot de um trace distribuído de `/evaluate`
 
-## Entregáveis finais
+### Evidências alertas e self-healing
+- [ ] Rodar `.\scripts\test-crash-alert.ps1` para forçar CrashLoopBackOff
+- [ ] Screenshot da notificação chegando no Discord
+- [ ] Screenshot do incidente aberto no PagerDuty
+- [ ] Screenshot do workflow `self-healing.yml` executando no GitHub Actions
+- [ ] Screenshot do `kubectl rollout status` mostrando recovery
 
-- [ ] Repositório GitHub com todo o código
-- [ ] Vídeo de demonstração (até 25 min)
-- [ ] Relatório PDF com evidências visuais:
-  - [ ] Print do Dashboard Grafana customizado
-  - [ ] Print de Trace distribuído no New Relic
-  - [ ] Print da notificação no Discord
-  - [ ] Print do log de execução do Self-Healing (GitHub Actions)
-  - [ ] Justificativa técnica: New Relic vs Datadog, PagerDuty vs OpsGenie
+### Gravação do vídeo (até 25 min)
+- [ ] Mostrar arquitetura geral (README / diagrama)
+- [ ] Mostrar cluster rodando (ArgoCD, pods)
+- [ ] Mostrar Dashboard Grafana com métricas reais
+- [ ] Demonstrar fluxo de alerta E2E (crash → Discord → PagerDuty → self-healing → recovery)
+- [ ] Mostrar New Relic Service Map + trace distribuído
+- [ ] Mostrar CI/CD pipeline (GitHub Actions)
+
+### Entregáveis finais
+- [ ] Repositório GitHub público com todo o código
+- [ ] Vídeo de demonstração enviado
+- [ ] Relatório PDF com evidências visuais
 
 ---
 
@@ -236,7 +185,7 @@ OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
 | Incident Management | **PagerDuty** | Integração nativa com Grafana; free tier funcional |
 | ChatOps | **Discord** | Webhook simples de configurar; sem necessidade de app workspace |
 | OTel Collector | **otel/opentelemetry-collector-contrib** | Hub único para Prometheus + Loki + New Relic |
-| Self-Healing trigger | **Grafana webhook → GitHub Action** | Sem infra extra; reutiliza OIDC já configurado |
+| Self-Healing trigger | **Grafana webhook → self-healing-relay → GitHub Action** | Sem infra extra; reutiliza OIDC já configurado |
 
 ---
 
