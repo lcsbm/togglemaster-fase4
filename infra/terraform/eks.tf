@@ -81,5 +81,11 @@ module "eks" {
     }
   }
 
+  cluster_timeouts = {
+    create = "30m"
+    update = "60m"
+    delete = "60m"
+  }
+
   tags = local.common_tags
 }
