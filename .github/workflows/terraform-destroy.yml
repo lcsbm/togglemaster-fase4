@@ -70,16 +70,9 @@ jobs:
               -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
             kubectl delete namespace "$ns" --wait=false 2>/dev/null || true
             sleep 2
-            kubectl get namespace "$ns" -o json 2>/dev/null | \
-              python3 -c "
-import sys, json
-try:
-    d = json.load(sys.stdin)
-    d.setdefault('spec', {})['finalizers'] = []
-    print(json.dumps(d))
-except:
-    pass
-" | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f - 2>/dev/null || true
+            kubectl get namespace "$ns" -o json 2>/dev/null \
+              | jq '.spec.finalizers = []' \
+              | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f - 2>/dev/null || true
           done
         continue-on-error: true
 
