@@ -103,13 +103,8 @@ grafana:
             - uid: self-healing-receiver
               type: webhook
               settings:
-                url: https://api.github.com/repos/lcsbm/togglemaster-fase4/actions/workflows/self-healing.yml/dispatches
+                url: http://self-healing-relay.monitoring.svc.cluster.local/
                 httpMethod: POST
-                authorization_scheme: Bearer
-                authorization_credentials: ${GITHUB_PAT}
-                # GitHub Actions API requer header Accept explícito
-                # O body é fixo: reinicia auth-service como demonstração do self-healing
-                body: '{"ref":"main","inputs":{"service":"auth-service","namespace":"togglemaster"}}'
               disableResolveMessage: true
 
     policies.yaml:
