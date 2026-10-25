@@ -46,6 +46,16 @@ spec:
       kind: CustomResourceDefinition
       jqPathExpressions:
         - .metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"]
+    # kube-controller-manager injeta defaults (terminationMessagePolicy, etc.) após apply
+    - group: apps
+      kind: DaemonSet
+      managedFieldsManagers:
+        - kube-controller-manager
+    - group: apps
+      kind: Deployment
+      name: kube-prometheus-stack-grafana
+      managedFieldsManagers:
+        - kube-controller-manager
   syncPolicy:
     automated:
       prune: true
@@ -53,3 +63,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
