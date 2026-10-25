@@ -42,3 +42,6 @@ promtail:
 
 grafana:
   enabled: false
+  sidecar:
+    datasources:
+      enabled: false
