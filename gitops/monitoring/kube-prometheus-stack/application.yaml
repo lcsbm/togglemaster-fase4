@@ -20,6 +20,7 @@ spec:
       chart: kube-prometheus-stack
       targetRevision: "61.7.2"
       helm:
+        skipCrds: true
         valueFiles:
           - $values/gitops/monitoring/kube-prometheus-stack/values.yaml
     - repoURL: https://github.com/lcsbm/togglemaster-fase4
