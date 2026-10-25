@@ -22,7 +22,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: targeting-service
-          image: 603727984890.dkr.ecr.us-east-1.amazonaws.com/togglemaster/targeting-service:sha-7ffb78d
+          image: 603727984890.dkr.ecr.us-east-1.amazonaws.com/togglemaster/targeting-service:sha-fb94908
           securityContext:
             runAsUser: 100
           ports:
