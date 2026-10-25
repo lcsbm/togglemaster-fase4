@@ -22,7 +22,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: auth-service
-          image: 603727984890.dkr.ecr.us-east-1.amazonaws.com/togglemaster/auth-service:sha-b5f38ad
+          image: 603727984890.dkr.ecr.us-east-1.amazonaws.com/togglemaster/auth-service:sha-9894bc2
           securityContext:
             runAsUser: 100
           ports:
