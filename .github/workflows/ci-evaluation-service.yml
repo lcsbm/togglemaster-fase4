@@ -6,6 +6,7 @@ on:
     paths:
       - 'services/evaluation-service/**'
       - '.github/workflows/ci-evaluation-service.yml'
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:

@@ -6,6 +6,7 @@ on:
     paths:
       - 'services/flag-service/**'
       - '.github/workflows/ci-flag-service.yml'
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:

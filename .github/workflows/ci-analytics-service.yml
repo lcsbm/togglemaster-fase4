@@ -6,6 +6,7 @@ on:
     paths:
       - 'services/analytics-service/**'
       - '.github/workflows/ci-analytics-service.yml'
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:

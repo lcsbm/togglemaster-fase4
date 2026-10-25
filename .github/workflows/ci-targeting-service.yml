@@ -6,6 +6,7 @@ on:
     paths:
       - 'services/targeting-service/**'
       - '.github/workflows/ci-targeting-service.yml'
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:
