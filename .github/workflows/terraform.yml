@@ -12,6 +12,11 @@ on:
       - 'infra/terraform/**'
       - '.github/workflows/terraform.yml'
   workflow_dispatch:
+    inputs:
+      rebuild_images:
+        description: 'Rebuild e push de todas as imagens dos serviços após o apply?'
+        type: boolean
+        default: false
 
 env:
   TF_VERSION: '1.12.0'
@@ -159,3 +164,34 @@ jobs:
       - name: Terraform Apply
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve tfplan
+
+  # ── 5. Trigger CI de todos os serviços (opcional) ───────────────────────────
+  trigger-ci:
+    name: Trigger Service CI Pipelines
+    runs-on: ubuntu-latest
+    needs: apply
+    if: github.event.inputs.rebuild_images == 'true'
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch CI for all services
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflows = [
+              'ci-analytics-service.yml',
+              'ci-auth-service.yml',
+              'ci-evaluation-service.yml',
+              'ci-flag-service.yml',
+              'ci-targeting-service.yml',
+            ];
+            for (const wf of workflows) {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: wf,
+                ref: 'main',
+              });
+              console.log(`Triggered ${wf}`);
+            }
