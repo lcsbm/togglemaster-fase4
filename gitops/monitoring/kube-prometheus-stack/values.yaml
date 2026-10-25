@@ -37,8 +37,6 @@ alertmanager:
 
 grafana:
   enabled: true
-  adminPassword: ""  # gerenciado via secret externo (grafana-admin-secret)
-  existingSecret: grafana-admin-secret
   adminUser: admin
   # Injeta credenciais de alerting e self-healing como env vars no container Grafana
   extraEnvFrom:
