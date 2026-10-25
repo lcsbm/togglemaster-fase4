@@ -4,7 +4,6 @@ metadata:
   name: analytics-service
   namespace: togglemaster
 spec:
-  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
