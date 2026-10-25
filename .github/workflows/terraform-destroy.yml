@@ -45,21 +45,41 @@ jobs:
 
       - name: Pre-remove ArgoCD apps and stuck namespaces
         run: |
-          # Remove finalizer da Application togglemaster para desbloquear o namespace
+          # 1. Remove finalizer e deleta a Application para ArgoCD parar de gerenciar recursos
           kubectl patch application togglemaster -n argocd \
             -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
-
-          # Aguarda ArgoCD iniciar cascade delete (ou já está destruído)
+          kubectl delete application togglemaster -n argocd --wait=false 2>/dev/null || true
           sleep 5
 
-          # Force-remove finalizers do namespace togglemaster caso esteja em Terminating
-          kubectl patch namespace togglemaster \
-            -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+          # 2. Remove finalizers de CRDs que ficam presos em togglemaster
+          for api in applications.argoproj.io externalsecrets.external-secrets.io \
+                     clustersecretstores.external-secrets.io scaledobjects.keda.sh; do
+            kubectl get "$api" -n togglemaster -o name 2>/dev/null | while read res; do
+              kubectl patch "$res" -n togglemaster \
+                -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+            done
+          done
 
-          # Deleta namespaces de outros addons via API de finalizers
-          for ns in keda external-secrets argocd ingress-nginx monitoring; do
+          # 3. Force delete todos os recursos em togglemaster antes do Terraform tentar
+          kubectl delete all --all -n togglemaster --force --grace-period=0 2>/dev/null || true
+
+          # 4. Pre-deleta e force-finaliza cada namespace via API /finalize
+          #    Isso remove spec.finalizers=["kubernetes"] que bloqueia a deleção
+          for ns in togglemaster keda external-secrets ingress-nginx monitoring argocd; do
             kubectl patch namespace "$ns" \
               -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+            kubectl delete namespace "$ns" --wait=false 2>/dev/null || true
+            sleep 2
+            kubectl get namespace "$ns" -o json 2>/dev/null | \
+              python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    d.setdefault('spec', {})['finalizers'] = []
+    print(json.dumps(d))
+except:
+    pass
+" | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f - 2>/dev/null || true
           done
         continue-on-error: true
 
