@@ -24,14 +24,16 @@ Observabilidade (namespace: monitoring)
 
   Microsserviços --[OTLP gRPC]--> OTel Collector
                                       ├── Prometheus  (métricas)
-                                      ├── Loki        (logs)
+                                      ├── Loki        (logs via Promtail)
                                       └── New Relic   (APM / traces)
 
   Grafana <-- Prometheus + Loki
 
 Alertas & Self-Healing
 
-  Grafana Alert --[webhook]--> GitHub Action (self-healing.yml)
+  Grafana Alert --[webhook]--> self-healing-relay (monitoring)
+                  │                  └── GitHub Actions self-healing.yml
+                  │                        └── kubectl rollout restart
                   ├── PagerDuty  (incidente)
                   └── Discord    (ChatOps)
 ```
@@ -53,9 +55,9 @@ Alertas & Self-Healing
 | APM / Tracing | New Relic (Distributed Tracing + Service Map) |
 | Incidentes | PagerDuty (Events API V2) |
 | ChatOps | Discord webhook |
-| Self-Healing | GitHub Actions (`self-healing.yml`) disparado via Grafana webhook |
+| Self-Healing | self-healing-relay → GitHub Actions (`self-healing.yml`) |
 | Autoscaling | HPA (evaluation-service, CPU 70%) + KEDA (analytics-service, SQS) |
-| Secrets | External Secrets Operator --> AWS Secrets Manager |
+| Secrets | External Secrets Operator → AWS Secrets Manager |
 
 ---
 
@@ -64,20 +66,29 @@ Alertas & Self-Healing
 ```
 togglemaster-fase4/
 ├── services/
-│   ├── auth-service/           # Go - autenticação e API keys
-│   ├── evaluation-service/     # Go - avaliação de flags (Redis + SQS)
-│   ├── flag-service/           # Python - CRUD de feature flags
-│   ├── targeting-service/      # Python - regras de targeting
-│   └── analytics-service/      # Python - consumidor SQS
+│   ├── auth-service/           # Go — autenticação e API keys
+│   ├── evaluation-service/     # Go — avaliação de flags (Redis + SQS)
+│   ├── flag-service/           # Python — CRUD de feature flags
+│   ├── targeting-service/      # Python — regras de targeting
+│   └── analytics-service/      # Python — consumidor SQS
 ├── gitops/
-│   ├── */                      # Manifests K8s dos 5 serviços
-│   └── monitoring/             # Prometheus, Loki, Grafana, OTel Collector
+│   ├── */                      # Manifests K8s dos 5 serviços + ExternalSecrets
+│   ├── argocd/                 # ExternalSecret para argocd-secret
+│   ├── self-healing-relay/     # Deployment do relay webhook → GitHub Actions
+│   └── monitoring/
+│       ├── kube-prometheus-stack/  # Prometheus + Grafana + Alertmanager
+│       ├── loki/                   # Loki + Promtail
+│       ├── otel-collector/         # OTel Collector + ExternalSecret New Relic
+│       └── grafana/                # ExternalSecrets + Dashboard ConfigMap
 ├── infra/terraform/            # Infraestrutura completa AWS
+├── scripts/
+│   ├── test-alerts.sh          # Testa relay, Discord e E2E (bash)
+│   └── test-crash-alert.ps1    # Força CrashLoopBackOff para disparar alertas (PowerShell)
 └── .github/workflows/
-    ├── ci-*.yml                # CI para cada microsserviço
+    ├── ci-*.yml                # CI para cada microsserviço (build, test, Trivy, push ECR)
     ├── terraform.yml           # Plan / Apply (aprovação manual)
-    ├── terraform-destroy.yml   # Destroy com confirmação manual
-    └── self-healing.yml        # Rollout restart via workflow_dispatch
+    ├── terraform-destroy.yml   # Destroy com confirmação manual (timeout 6h, retry automático)
+    └── self-healing.yml        # Rollout restart via workflow_dispatch (OIDC)
 ```
 
 ---
@@ -86,7 +97,7 @@ togglemaster-fase4/
 
 | Role | Usado por | Permissões |
 |---|---|---|
-| `CICD-terraform-infra` | terraform.yml | Ampla (criar/destruir infra) |
+| `CICD-terraform-infra` | terraform.yml, terraform-destroy.yml | Ampla (criar/destruir infra) |
 | `CICD-ecr-push` | ci-*.yml (5 serviços) | ECR push em `togglemaster/*` |
 | `CICD-self-healing` | self-healing.yml | `eks:DescribeCluster` + K8s RBAC namespace-scoped |
 
@@ -131,13 +142,25 @@ aws secretsmanager create-secret \
   --name togglemaster/github-pat \
   --secret-string '{"token":"ghp_..."}' \
   --region us-east-1
+
+# ArgoCD (bcrypt hash da senha admin)
+aws secretsmanager create-secret \
+  --name togglemaster/argocd \
+  --secret-string '{"admin_password":"$2a$10$...","server_secretkey":"<random>"}' \
+  --region us-east-1
+
+# Grafana
+aws secretsmanager create-secret \
+  --name togglemaster/grafana \
+  --secret-string '{"admin":"<senha>"}' \
+  --region us-east-1
 ```
 
 ### 2. Infraestrutura
 
 ```bash
 # Via GitHub Actions (recomendado)
-# Actions --> Terraform CI/CD --> Run workflow
+# Actions → Terraform CI/CD → Run workflow
 # O apply aguarda aprovação manual em "Review deployments"
 
 # Ou localmente
@@ -157,20 +180,42 @@ kubectl get nodes
 
 ```bash
 kubectl get applications -n argocd
-# togglemaster   Synced   Healthy
+# NAME                    SYNC     HEALTH
+# togglemaster            Synced   Healthy
+# kube-prometheus-stack   Synced   Healthy
+# loki-stack              Synced   Healthy
+# otel-collector          Synced   Healthy
 ```
 
 ---
 
-## Fluxo de alertas
+## Fluxo de alertas e self-healing
 
 ```
-Grafana detecta taxa 5xx > 5% por 1 minuto
-  │
-  ├── PagerDuty  --> incidente aberto automaticamente
-  ├── Discord    --> mensagem no canal #alerts
-  └── GitHub Actions (self-healing.yml)
-        └── kubectl rollout restart deployment/auth-service -n togglemaster
+1. auth-service fica sem réplicas disponíveis
+2. Grafana avalia a regra a cada 1 minuto (for: 0m → dispara imediato)
+3. Grafana envia webhook para self-healing-relay (monitoring)
+4. Relay filtra status=firing e dispara workflow_dispatch → self-healing.yml
+5. GitHub Actions executa: kubectl rollout restart deployment/auth-service
+6. Em paralelo: PagerDuty abre incidente + Discord recebe notificação
+```
+
+### Testar manualmente
+
+```powershell
+# Força CrashLoopBackOff em loop (PowerShell) — Ctrl+C para parar
+.\scripts\test-crash-alert.ps1
+```
+
+```bash
+# Testar relay diretamente (sem downtime)
+bash scripts/test-alerts.sh relay
+
+# Testar apenas notificação Discord
+bash scripts/test-alerts.sh discord
+
+# Testar fluxo E2E completo
+bash scripts/test-alerts.sh e2e
 ```
 
 ---
@@ -182,11 +227,7 @@ Grafana detecta taxa 5xx > 5% por 1 minuto
 
 ```bash
 # Via GitHub Actions
-# Actions --> Terraform Destroy --> Run workflow --> digite DESTROY
-
-# Ou localmente
-cd infra/terraform
-terraform destroy
+# Actions → Terraform Destroy → Run workflow → digite DESTROY
 ```
 
 ---
