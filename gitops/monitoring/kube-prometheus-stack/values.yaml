@@ -48,6 +48,12 @@ grafana:
         name: grafana-alerting-secrets
     - secretRef:
         name: grafana-github-pat
+  extraSecretMounts:
+    - name: grafana-contactpoints
+      secretName: grafana-contactpoints
+      mountPath: /etc/grafana/provisioning/alerting/contactpoints.yaml
+      subPath: contactpoints.yaml
+      readOnly: true
   sidecar:
     dashboards:
       enabled: true
@@ -74,43 +80,9 @@ grafana:
       memory: 256Mi
 
   # ── Alerting provisioning ──────────────────────────────────────────────────
+  # contactpoints.yaml e montado via extraSecretMounts (ExternalSecret grafana-contactpoints)
+  # para evitar problemas de interpolacao de env vars no Grafana Alerting provisioner
   alerting:
-    contactpoints.yaml:
-      apiVersion: 1
-      contactPoints:
-        - orgId: 1
-          name: PagerDuty
-          receivers:
-            - uid: pagerduty-receiver
-              type: pagerduty
-              settings:
-                integrationKey: ${PAGERDUTY_KEY}
-                severity: critical
-                class: ToggleMaster
-                component: api
-                group: togglemaster
-              disableResolveMessage: false
-        - orgId: 1
-          name: Discord
-          receivers:
-            - uid: discord-receiver
-              type: discord
-              settings:
-                url: ${DISCORD_WEBHOOK}
-                message: |
-                  **[{{ "{{" }} .Status | toUpper {{ "}}" }}]** {{ "{{" }} .CommonAnnotations.summary {{ "}}" }}
-                  Severity: {{ "{{" }} .CommonLabels.severity {{ "}}" }}
-              disableResolveMessage: false
-        - orgId: 1
-          name: Self-Healing
-          receivers:
-            - uid: self-healing-receiver
-              type: webhook
-              settings:
-                url: http://self-healing-relay.monitoring.svc.cluster.local/
-                httpMethod: POST
-              disableResolveMessage: true
-
     policies.yaml:
       apiVersion: 1
       policies:
