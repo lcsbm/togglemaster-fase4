@@ -56,7 +56,6 @@ jobs:
 
       - name: Terraform Destroy
         working-directory: ${{ env.TF_DIR }}
-        timeout-minutes: 60
         run: terraform destroy -auto-approve
         env:
           TF_VAR_project: togglemaster
