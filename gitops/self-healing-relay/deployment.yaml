@@ -1,0 +1,98 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: self-healing-relay
+  namespace: monitoring
+data:
+  relay.py: |
+    import os, json, urllib.request
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+
+    GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
+    GITHUB_URL = (
+        "https://api.github.com/repos/lcsbm/togglemaster-fase4"
+        "/actions/workflows/self-healing.yml/dispatches"
+    )
+    PAYLOAD = json.dumps({
+        "ref": "main",
+        "inputs": {"service": "auth-service", "namespace": "togglemaster"}
+    }).encode()
+
+    class RelayHandler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length)
+            try:
+                status = json.loads(body).get("status", "unknown")
+                print(f"Alert received — status: {status}")
+                if status != "firing":
+                    self.send_response(200); self.end_headers(); return
+                req = urllib.request.Request(
+                    GITHUB_URL, data=PAYLOAD,
+                    headers={"Authorization": f"Bearer {GITHUB_TOKEN}",
+                             "Accept": "application/vnd.github+json",
+                             "Content-Type": "application/json"})
+                with urllib.request.urlopen(req) as r:
+                    print(f"GitHub dispatch: {r.status}")
+                self.send_response(204); self.end_headers()
+            except Exception as e:
+                print(f"Error: {e}")
+                self.send_response(500); self.end_headers()
+        def log_message(self, *a): pass
+
+    HTTPServer(("", int(os.environ.get("PORT", 8080))), RelayHandler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: self-healing-relay
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: self-healing-relay
+  template:
+    metadata:
+      labels:
+        app: self-healing-relay
+    spec:
+      containers:
+        - name: relay
+          image: python:3.12-alpine
+          command: ["python", "/app/relay.py"]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-github-pat
+                  key: GITHUB_PAT
+          volumeMounts:
+            - name: script
+              mountPath: /app
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
+      volumes:
+        - name: script
+          configMap:
+            name: self-healing-relay
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: self-healing-relay
+  namespace: monitoring
+spec:
+  selector:
+    app: self-healing-relay
+  ports:
+    - port: 80
+      targetPort: 8080
