@@ -138,25 +138,22 @@ grafana:
       apiVersion: 1
       groups:
         - orgId: 1
-          name: togglemaster-http
+          name: togglemaster-availability
           folder: ToggleMaster
           interval: 1m
           rules:
-            - uid: http-5xx-rate-high
-              title: "Taxa de erros HTTP 5xx > 5%"
+            - uid: auth-service-down
+              title: "auth-service sem réplicas disponíveis"
               condition: threshold
               data:
-                - refId: rate
+                - refId: replicas
                   relativeTimeRange:
                     from: 300
                     to: 0
                   datasourceUid: prometheus
                   model:
-                    expr: |
-                      sum(rate(nginx_ingress_controller_requests{namespace="togglemaster",status=~"5.."}[5m]))
-                      /
-                      sum(rate(nginx_ingress_controller_requests{namespace="togglemaster"}[5m]))
-                    refId: rate
+                    expr: kube_deployment_status_replicas_available{deployment="auth-service",namespace="togglemaster"}
+                    refId: replicas
                 - refId: threshold
                   datasourceUid: __expr__
                   model:
@@ -164,24 +161,24 @@ grafana:
                     refId: threshold
                     conditions:
                       - evaluator:
-                          type: gt
-                          params: [0.05]
+                          type: lt
+                          params: [1]
                         operator:
                           type: and
                         query:
-                          params: [rate]
+                          params: [replicas]
                         reducer:
                           type: last
-              noDataState: OK
+              noDataState: Alerting
               execErrState: Alerting
               for: 1m
               labels:
                 severity: critical
                 team: platform
               annotations:
-                summary: "Taxa de erros 5xx acima de 5% em togglemaster"
-                description: "A taxa de respostas HTTP 5xx ultrapassou 5% nos últimos 5 minutos."
-                runbook: "https://github.com/lcsbm/togglemaster-fase4/blob/main/docs/runbooks/5xx-high.md"
+                summary: "auth-service com 0 réplicas disponíveis em togglemaster"
+                description: "O deployment auth-service não possui réplicas prontas. Self-healing iniciado."
+                runbook: "https://github.com/lcsbm/togglemaster-fase4/blob/main/docs/runbooks/auth-service-down.md"
 
 # kube-state-metrics — expõe métricas dos objetos K8s
 kube-state-metrics:
