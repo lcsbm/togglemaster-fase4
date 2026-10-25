@@ -44,6 +44,26 @@ module "eks" {
 
       # Disco mínimo para economizar
       disk_size = 20
+
+      # Informa ao kubelet o limite correto de pods para prefix delegation
+      # Sem isso, o kubelet usa o default calculado para IPs individuais (17 no t3.medium)
+      # Com prefix delegation ativo no VPC CNI, o limite real é 110 pods por nó
+      cloudinit_pre_nodeadm = [
+        {
+          content_type = "application/node.eks.aws"
+          content = jsonencode({
+            apiVersion = "node.eks.aws/v1alpha1"
+            kind       = "NodeConfig"
+            spec = {
+              kubelet = {
+                config = {
+                  maxPods = 110
+                }
+              }
+            }
+          })
+        }
+      ]
     }
   }
 
