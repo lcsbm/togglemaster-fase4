@@ -12,6 +12,10 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -34,9 +38,19 @@ func (a *App) getDecision(ctx context.Context, userID, flagName string) (bool, e
 // getCombinedFlagInfo busca os dados no Redis, com fallback para os microsserviços
 func (a *App) getCombinedFlagInfo(ctx context.Context, flagName string) (*CombinedFlagInfo, error) {
 	cacheKey := fmt.Sprintf("flag_info:%s", flagName)
+	tracer := otel.Tracer("evaluation-service")
 
 	// 1. Tentar buscar do Cache (Redis)
-	val, err := a.RedisClient.Get(ctx, cacheKey).Result()
+	getCtx, getSpan := tracer.Start(ctx, "redis GET",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			attribute.String("db.system", "redis"),
+			attribute.String("db.statement", "GET "+cacheKey),
+		),
+	)
+	val, err := a.RedisClient.Get(getCtx, cacheKey).Result()
+	getSpan.End()
+
 	if err == nil {
 		// Cache HIT
 		var info CombinedFlagInfo
@@ -47,7 +61,7 @@ func (a *App) getCombinedFlagInfo(ctx context.Context, flagName string) (*Combin
 		// Se o unmarshal falhar, trata como cache miss
 		log.Printf("Erro ao desserializar cache para flag '%s': %v", flagName, err)
 	}
-	
+
 	log.Printf("Cache MISS para flag '%s'", flagName)
 	// 2. Cache MISS - Buscar dos serviços
 	info, err := a.fetchFromServices(ctx, flagName)
@@ -58,9 +72,17 @@ func (a *App) getCombinedFlagInfo(ctx context.Context, flagName string) (*Combin
 	// 3. Salvar no Cache
 	jsonData, err := json.Marshal(info)
 	if err == nil {
-		if setErr := a.RedisClient.Set(ctx, cacheKey, jsonData, CACHE_TTL).Err(); setErr != nil {
+		setCtx, setSpan := tracer.Start(ctx, "redis SET",
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(
+				attribute.String("db.system", "redis"),
+				attribute.String("db.statement", "SET "+cacheKey),
+			),
+		)
+		if setErr := a.RedisClient.Set(setCtx, cacheKey, jsonData, CACHE_TTL).Err(); setErr != nil {
 			log.Printf("Aviso: falha ao salvar no cache Redis: %v", setErr)
 		}
+		setSpan.End()
 	}
 
 	return info, nil

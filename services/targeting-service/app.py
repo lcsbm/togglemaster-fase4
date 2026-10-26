@@ -16,6 +16,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
 logging.basicConfig(level=logging.INFO)
@@ -31,6 +32,7 @@ def _init_otel():
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
         trace.set_tracer_provider(provider)
         RequestsInstrumentor().instrument()
+        Psycopg2Instrumentor().instrument()
         log.info(f"OTEL: TracerProvider inicializado (endpoint: {endpoint}, service: {svc_name})")
     except Exception as e:
         log.warning(f"OTEL: falha ao inicializar — traces desabilitados: {e}")
