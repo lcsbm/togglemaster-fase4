@@ -32,7 +32,7 @@ def _init_otel():
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
         trace.set_tracer_provider(provider)
         RequestsInstrumentor().instrument()
-        Psycopg2Instrumentor().instrument()
+        Psycopg2Instrumentor().instrument(skip_dep_check=True)
         log.info(f"OTEL: TracerProvider inicializado (endpoint: {endpoint}, service: {svc_name})")
     except Exception as e:
         log.warning(f"OTEL: falha ao inicializar — traces desabilitados: {e}")
