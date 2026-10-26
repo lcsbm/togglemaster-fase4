@@ -22,7 +22,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: evaluation-service
-          image: 603727984890.dkr.ecr.us-east-1.amazonaws.com/togglemaster/evaluation-service:sha-9894bc2
+          image: 603727984890.dkr.ecr.us-east-1.amazonaws.com/togglemaster/evaluation-service:sha-45cbc28
           securityContext:
             runAsUser: 100
           ports:
